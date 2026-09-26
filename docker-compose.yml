@@ -1,0 +1,52 @@
+# The real YaFT backend, for the playground to talk to.
+#
+# The point of this repository is that the library is exercised against a
+# running backend rather than against mocked HTTP responses, so this pulls the
+# published images rather than building anything.
+#
+# Ports are bound to localhost only: this is a development stack, not a
+# deployment.
+
+services:
+  yaft-db:
+    image: ghcr.io/tehw0lf/yaft-db:latest
+    environment:
+      POSTGRES_USER: yaft
+      POSTGRES_PASSWORD: playground
+      POSTGRES_DB: yaft
+    volumes:
+      # /var/lib/postgresql, not .../data: Postgres 18 keeps PGDATA in a
+      # version subdirectory and refuses to start when it finds a volume at
+      # the old path.
+      - yaft_java_playground_db:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U yaft -d yaft']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+      - /run
+      - /var/run/postgresql
+
+  yaft:
+    image: ghcr.io/tehw0lf/yaft:latest
+    ports:
+      - '127.0.0.1:8080:8080'
+    environment:
+      DB_DSN: postgres://yaft:playground@yaft-db:5432/yaft
+    depends_on:
+      yaft-db:
+        condition: service_healthy
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+
+volumes:
+  yaft_java_playground_db:

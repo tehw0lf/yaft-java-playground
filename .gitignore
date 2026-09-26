@@ -1,0 +1,8 @@
+.gradle/
+build/
+.idea/
+*.iml
+.vscode/
+
+# Written by scripts/seed.sh: the group UUID and its secret.
+seed.properties

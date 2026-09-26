@@ -1,0 +1,12 @@
+[versions]
+spring-boot = "4.1.1"
+dependency-management = "1.1.7"
+# The published artifact from Maven Central -- the point of this repository.
+yaft = "0.2.3"
+
+[libraries]
+yaft = { module = "de.tehwolf:yaft", version.ref = "yaft" }
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+dependency-management = { id = "io.spring.dependency-management", version.ref = "dependency-management" }

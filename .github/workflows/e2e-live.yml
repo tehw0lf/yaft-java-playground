@@ -1,0 +1,41 @@
+name: e2e against yaft.tehwolf.de
+
+# The same suite as the e2e job in build.yml, against the deployed instance:
+# Traefik, Cloudflare and TLS in the path.
+#
+# Manual only. Every run seeds a fresh toggle group in production and flips
+# two of its toggles; the retention job removes the group once it has gone
+# untouched for 30 days, so a schedule would only pile up data nobody reads.
+on:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: "Backend to run against"
+        default: "https://yaft.tehwolf.de"
+        required: true
+
+jobs:
+  e2e:
+    name: yaft from Maven Central against the deployed backend
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      # Six seed writes and four flips against a limit of five a minute; the
+      # seed and the suite both retry a refused write.
+      - name: seed the backend
+        env:
+          API_URL: ${{ inputs.api_url }}
+        run: ./scripts/seed.sh
+
+      - name: run the e2e suite
+        run: ./gradlew e2eTest

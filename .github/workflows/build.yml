@@ -1,0 +1,81 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build_and_publish:
+    uses: tehw0lf/workflows/.github/workflows/build-test-publish.yml@main
+    permissions:
+      id-token: write
+      attestations: write
+      actions: write
+      contents: write
+      packages: write
+      security-events: write
+      pull-requests: write
+    with:
+      tool: ./gradlew
+      java_version: "25"
+      # Unit tests, including Spring proxies against YaFT; no backend needed.
+      test: check
+      build_branch: assemble
+      build_main: assemble
+
+  # The point of this repository: de.tehwolf:yaft from Maven Central, inside
+  # Spring Boot, against a real backend. Separate from the reusable workflow
+  # because the backend has to be up and seeded first.
+  e2e:
+    name: yaft from Maven Central against a real backend
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: log in to ghcr
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The GHCR packages are private, and a GITHUB_TOKEN minted for this
+      # repository cannot read another repository's packages. Rather than
+      # requiring a PAT, fall back to building the images from the backend
+      # repository, which is public -- as yaft-playground does.
+      - name: build the backend images if they cannot be pulled
+        run: |
+          if docker pull ghcr.io/tehw0lf/yaft:latest >/dev/null 2>&1 \
+            && docker pull ghcr.io/tehw0lf/yaft-db:latest >/dev/null 2>&1; then
+            echo "pulled the published images"
+          else
+            echo "::notice::pull denied, building from tehw0lf/YaFT instead"
+            git clone --depth 1 https://github.com/tehw0lf/YaFT.git "$RUNNER_TEMP/yaft"
+            docker build -t ghcr.io/tehw0lf/yaft:latest "$RUNNER_TEMP/yaft"
+            docker build -f "$RUNNER_TEMP/yaft/db/Dockerfile" \
+              -t ghcr.io/tehw0lf/yaft-db:latest "$RUNNER_TEMP/yaft"
+          fi
+
+      - name: start and seed the backend
+        run: |
+          ./scripts/backend.sh up
+          ./scripts/seed.sh
+
+      - name: run the e2e suite
+        run: ./gradlew e2eTest
+
+      - name: backend logs on failure
+        if: failure()
+        run: docker compose logs --tail 100
