@@ -17,7 +17,8 @@ case "${1:-up}" in
     # A missing key answering 404 means the router and the database are both
     # up; a health endpoint would be nicer but the API does not have one.
     for _ in $(seq 1 60); do
-      if [ "$(curl -s -o /dev/null -w '%{http_code}' "${API_URL}/features/nothing" || true)" = "404" ]; then
+      # --max-time: a stalled answer must not stop the loop from counting down.
+      if [ "$(curl -s --max-time 5 -o /dev/null -w '%{http_code}' "${API_URL}/features/nothing" || true)" = "404" ]; then
         echo "backend ready"
         exit 0
       fi

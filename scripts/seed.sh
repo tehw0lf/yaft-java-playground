@@ -17,8 +17,10 @@ OUT="seed.properties"
 # --retry covers 429: yaft.tehwolf.de allows 5 writes a minute and the seed
 # makes 6, so against it the last call is always refused at first. curl
 # counts 429 as transient, honours Retry-After and otherwise backs off.
+# --retry-max-time only stops new attempts; --max-time bounds each one, so a
+# stalled response cannot hang the seed.
 post() {
-  curl -sf --retry 6 --retry-max-time 120 -X POST "${API_URL}/features" \
+  curl -sf --connect-timeout 10 --max-time 30 --retry 6 --retry-max-time 120 -X POST "${API_URL}/features" \
     -H 'Content-Type: application/json' -d "$1"
 }
 
