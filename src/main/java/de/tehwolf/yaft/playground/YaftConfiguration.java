@@ -47,6 +47,7 @@ public class YaftConfiguration {
             this.provider = provider;
         }
 
+        // yaft.refresh-interval, default 30s; read only here.
         @Scheduled(fixedDelayString = "${yaft.refresh-interval:30s}")
         void refresh() {
             provider.refreshQuietly();
