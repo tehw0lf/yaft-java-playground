@@ -2,7 +2,7 @@
 spring-boot = "4.1.1"
 dependency-management = "1.1.7"
 # The published artifact from Maven Central -- the point of this repository.
-yaft = "0.2.3"
+yaft = "0.2.4"
 
 [libraries]
 yaft = { module = "de.tehwolf:yaft", version.ref = "yaft" }
