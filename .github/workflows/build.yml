@@ -17,6 +17,8 @@ jobs:
       packages: write
       security-events: write
       pull-requests: write
+      # the reusable security scan opens a failure issue
+      issues: write
     with:
       tool: ./gradlew
       java_version: "25"
