@@ -17,7 +17,9 @@ jobs:
       packages: write
       security-events: write
       pull-requests: write
-      # the reusable security scan opens a failure issue
+      # a nested job of the reusable security scan requests it; GitHub checks
+      # that request before the job's if, so it is needed although that job
+      # only runs on schedule or workflow_dispatch
       issues: write
     with:
       tool: ./gradlew
